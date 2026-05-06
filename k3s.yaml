@@ -101,6 +101,7 @@ spec:
         - name: BIND_ADDR
           value: "0.0.0.0:3000"
         - name: COORD_URL
+<<<<<<< Updated upstream
           value: "https://coordinador-service:3001"
         - name: TLS_CERT
           value: "/certs/tls.crt"
@@ -116,6 +117,14 @@ spec:
       - name: tls-certs
         secret:
           secretName: edge-tls
+=======
+          value: "http://coordinador-service:3001"
+        - name: EDGE_ID
+          valueFrom:
+              fieldRef:
+                  fieldPath: spec.nodeName
+          
+>>>>>>> Stashed changes
 ---
 apiVersion: v1
 kind: Service

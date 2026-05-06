@@ -145,14 +145,27 @@ async fn handle_sensor_reading(
     };
 
     let url = format!("{}/api/edge", state.coord_url);
-    match state.client.post(&url).json(&report).send().await {
-        Ok(res) => {
-            if !res.status().is_success() {
-                tracing::warn!("Coordinator rechazó reporte: {}", res.status());
+    let client = state.client.clone();
+    
+    // Lanzamos el envío asíncrono para no bloquear la recepción de más lecturas de sensores
+    tokio::spawn(async move {
+        let mut backoff = 1; // Segundos iniciales
+        loop {
+            match client.post(&url).json(&report).send().await {
+                Ok(res) if res.status().is_success() => {
+                    tracing::info!("Reporte enviado con éxito al coordinador.");
+                    break; // Salimos del loop
+                }
+                Ok(res) => {
+                    tracing::warn!("Coordinator rechazó reporte: {}. Reintentando en {}s...", res.status(), backoff);
+                }
+                Err(e) => {
+                    tracing::error!("Error enviando reporte: {}. Reintentando en {}s...", e, backoff);
+                }
             }
+            
+            tokio::time::sleep(tokio::time::Duration::from_secs(backoff)).await;
+            backoff = std::cmp::min(backoff * 2, 60); // Backoff exponencial, máximo 60s
         }
-        Err(e) => {
-            tracing::error!("Error enviando reporte al coordinator: {}", e);
-        }
-    }
+    });
 }

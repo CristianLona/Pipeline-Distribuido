@@ -1,6 +1,12 @@
 #!/bin/bash
 # status.sh
-# Muestra el estado actual de tc qdisc en todas las interfaces relevantes.
+# Muestra el estado actual de tc qdisc en la interfaz especificada.
 
-echo "Estado actual de tc qdisc en todas las interfaces:"
-# sudo tc qdisc show
+INTERFACE=${1:-zt0}
+
+echo "Estado actual de las reglas de red (tc qdisc) en la interfaz: $INTERFACE"
+echo "------------------------------------------------------------"
+
+sudo tc qdisc show dev $INTERFACE
+
+echo "------------------------------------------------------------"

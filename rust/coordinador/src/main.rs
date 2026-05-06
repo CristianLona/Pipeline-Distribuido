@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 use axum::{routing::post, Json, Router};
 use axum_server::tls_rustls::RustlsConfig;
 use common::{EdgeReport, Heartbeat};
@@ -10,6 +11,25 @@ use std::fs::File;
 use std::io::BufReader;
 use std::net::SocketAddr;
 use std::sync::Arc;
+=======
+use axum::{
+    extract::State,
+    routing::post,
+    Json, Router,
+};
+use common::{EdgeReport, Heartbeat};
+use std::collections::HashMap;
+use std::env;
+use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
+use tokio::sync::Mutex;
+use tokio::time::{sleep, Duration};
+
+struct CoordState {
+    edge_last_seen: Mutex<HashMap<String, u64>>,
+    edge_status: Mutex<HashMap<String, bool>>,
+}
+>>>>>>> Stashed changes
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -20,6 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .install_default()
         .expect("No se pudo instalar el CryptoProvider de rustls");
 
+<<<<<<< Updated upstream
     let bind_addr = env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:3001".to_string());
     let cert_path = env::var("TLS_CERT").unwrap_or_else(|_| "/certs/coordinador.crt".to_string());
     let key_path = env::var("TLS_KEY").unwrap_or_else(|_| "/certs/coordinador.key".to_string());
@@ -30,10 +51,50 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rustls_config = RustlsConfig::from_config(Arc::new(server_config));
 
     tracing::info!("Iniciando Coordinador (mTLS) en https://{}", bind_addr);
+=======
+    let state = Arc::new(CoordState {
+        edge_last_seen: Mutex::new(HashMap::new()),
+        edge_status: Mutex::new(HashMap::new()),
+    });
+
+    tracing::info!("Iniciando Coordinador en {}", bind_addr);
+>>>>>>> Stashed changes
+
+    // Tarea en segundo plano para monitorear caídas de los Edges
+    let monitor_state = state.clone();
+    tokio::spawn(async move {
+        loop {
+            sleep(Duration::from_secs(1)).await;
+            
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64;
+
+            let last_seen = monitor_state.edge_last_seen.lock().await;
+            let mut status = monitor_state.edge_status.lock().await;
+
+            for (edge_id, &timestamp) in last_seen.iter() {
+                // Si pasaron más de 10 segundos y el edge estaba "online" (true)
+                if now.saturating_sub(timestamp) > 10_000 {
+                    if let Some(is_online) = status.get_mut(edge_id) {
+                        if *is_online {
+                            *is_online = false;
+                            tracing::error!(
+                                "\n[!] ALERTA: Nodo Edge '{}' CAÍDO (No hay heartbeats en >10s)",
+                                edge_id
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    });
 
     let app = Router::new()
         .route("/api/edge", post(handle_edge_report))
-        .route("/api/heartbeat", post(handle_heartbeat));
+        .route("/api/heartbeat", post(handle_heartbeat))
+        .with_state(state);
 
     let addr: SocketAddr = bind_addr.parse()?;
     axum_server::bind_rustls(addr, rustls_config)
@@ -119,6 +180,7 @@ async fn handle_edge_report(Json(report): Json<EdgeReport>) {
     }
 }
 
+<<<<<<< Updated upstream
 async fn handle_heartbeat(Json(hb): Json<Heartbeat>) {
     tracing::debug!(
         "Heartbeat recibido de {} ({}) en {}",
@@ -126,4 +188,27 @@ async fn handle_heartbeat(Json(hb): Json<Heartbeat>) {
         hb.role,
         hb.timestamp_ms
     );
+=======
+async fn handle_heartbeat(
+    State(state): State<Arc<CoordState>>,
+    Json(hb): Json<Heartbeat>,
+) {
+    tracing::debug!("Heartbeat recibido de {} ({}) en {}", hb.node_id, hb.role, hb.timestamp_ms);
+    
+    if hb.role == "edge" {
+        let mut last_seen = state.edge_last_seen.lock().await;
+        let mut status = state.edge_status.lock().await;
+        
+        last_seen.insert(hb.node_id.clone(), hb.timestamp_ms);
+        
+        let is_online = status.entry(hb.node_id.clone()).or_insert(false);
+        if !*is_online {
+            *is_online = true;
+            tracing::info!(
+                "\n[+] INFO: Nodo Edge '{}' CONECTADO / RECONECTADO",
+                hb.node_id
+            );
+        }
+    }
+>>>>>>> Stashed changes
 }

@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 # Rust build artifacts
 target/
 
@@ -19,3 +20,27 @@ wg0.conf
 .DS_Store
 *.swp
 *~
+=======
+# Rust build artifacts
+target/
+
+# Llaves y certificados
+*.key
+*.pem
+*.p12
+*.crt
+*.csr
+*.tar
+
+# WireGuard config real (solo versiones sanitizadas en /vpn/)
+wg0.conf
+
+# Variables de entorno con credenciales
+.env
+.env.*
+
+# Sistema
+.DS_Store
+*.swp
+*~
+>>>>>>> Stashed changes
