@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  coordinador:
+    build:
+      context: .
+      dockerfile: docker/coordinador/Dockerfile
+    container_name: pipeline_coordinador
+    ports:
+      - "3001:3001"
+    environment:
+      - RUST_LOG=info
+      - BIND_ADDR=0.0.0.0:3001
+    networks:
+      - iot_net
+
+  edge:
+    build:
+      context: .
+      dockerfile: docker/edge/Dockerfile
+    container_name: pipeline_edge
+    ports:
+      - "3000:3000"
+    environment:
+      - RUST_LOG=info
+      - BIND_ADDR=0.0.0.0:3000
+      - COORD_URL=http://coordinador:3001
+    depends_on:
+      - coordinador
+    networks:
+      - iot_net
+
+  sensor_1:
+    build:
+      context: .
+      dockerfile: docker/sensor/Dockerfile
+    container_name: pipeline_sensor_1
+    environment:
+      - RUST_LOG=info
+      - SENSOR_ID=S1
+      - EDGE_URL=http://edge:3000/api/sensor
+    depends_on:
+      - edge
+    networks:
+      - iot_net
+
+  sensor_2:
+    build:
+      context: .
+      dockerfile: docker/sensor/Dockerfile
+    container_name: pipeline_sensor_2
+    environment:
+      - RUST_LOG=info
+      - SENSOR_ID=S2
+      - EDGE_URL=http://edge:3000/api/sensor
+    depends_on:
+      - edge
+    networks:
+      - iot_net
+
+networks:
+  iot_net:
+    driver: bridge
