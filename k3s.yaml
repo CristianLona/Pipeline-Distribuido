@@ -36,6 +36,20 @@ spec:
           value: "info"
         - name: BIND_ADDR
           value: "0.0.0.0:3001"
+        - name: TLS_CERT
+          value: "/certs/tls.crt"
+        - name: TLS_KEY
+          value: "/certs/tls.key"
+        - name: TLS_CA
+          value: "/certs/ca.crt"
+        volumeMounts:
+        - name: tls-certs
+          mountPath: /certs
+          readOnly: true
+      volumes:
+      - name: tls-certs
+        secret:
+          secretName: coord-tls
 ---
 apiVersion: v1
 kind: Service
@@ -87,7 +101,21 @@ spec:
         - name: BIND_ADDR
           value: "0.0.0.0:3000"
         - name: COORD_URL
-          value: "http://coordinador-service:3001"
+          value: "https://coordinador-service:3001"
+        - name: TLS_CERT
+          value: "/certs/tls.crt"
+        - name: TLS_KEY
+          value: "/certs/tls.key"
+        - name: TLS_CA
+          value: "/certs/ca.crt"
+        volumeMounts:
+        - name: tls-certs
+          mountPath: /certs
+          readOnly: true
+      volumes:
+      - name: tls-certs
+        secret:
+          secretName: edge-tls
 ---
 apiVersion: v1
 kind: Service
